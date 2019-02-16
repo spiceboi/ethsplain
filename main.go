@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -136,6 +137,10 @@ func (s *Splain) addNode(val interface{}, f field) {
 	switch f {
 	case NONCE:
 		txt, more = nonceInfo(val)
+	case GAS_PRICE:
+		txt, more = gasPriceInfo(val)
+	case GAS_LIMIT:
+		txt, more = gasLimitInfo(val)
 	default:
 		txt = "NOT IMPLEMENTED"
 		more = "Not IMPLEMENTED"
@@ -158,6 +163,22 @@ func nonceInfo(val interface{}) (string, string) {
 	txt := fmt.Sprintf("Nonce: %d", i)
 	more := "The nonce is a sequence number issued my the transaction creator used to prevent message replay. The nonce of each transaction of an account must be exactly 1 greater than the previous nonce used. The Ethereum yellow paper defines the nonce as 'A scalar value equal to the number of transactions sent from this address or, in the case of accounts with associated code, the number of contract-creations made by this account"
 
+	return txt, more
+}
+
+func gasPriceInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+	i := big.NewInt(0).SetBytes(buf)
+
+	txt := fmt.Sprintf("Gas Price: %s", i.String())
+	more := "The price of gas (in wei) that the sender is willing to pay. Gas is purchased with ether and serves to protect the limited resources of the network (computation, memory, and storage). The amount of ether spent for gas can be calculated by multiplying the Gas Price by the amount of gas consumed in the transaction (21000 gas for a standard transaction)"
+	return txt, more
+}
+
+func gasLimitInfo(val interface{}) (string, string) {
+	i := val.(uint64)
+	txt := fmt.Sprintf("Gas Limit: %d", i)
+	more := "The maximum amount of gas the originator is willing to pay for this transaction. The amount of gas consumed depends on how much computation your transaction requires."
 	return txt, more
 }
 
