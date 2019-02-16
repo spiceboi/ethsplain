@@ -24,6 +24,20 @@ type Token struct {
 	More string
 }
 
+type field int
+
+var (
+	NONCE     field = 0
+	GAS_PRICE field = 1
+	GAS_LIMIT field = 2
+	RECIPIENT field = 3
+	VALUE     field = 4
+	DATA      field = 5
+	SIG_V     field = 6
+	SIG_R     field = 7
+	SIG_S     field = 8
+)
+
 func main() {
 	parse()
 }
@@ -72,16 +86,16 @@ func parse() []byte {
 	//splain.addNode(prefix)
 	//addRLPNode(&splain, prefix)
 
-	splain.addNode(tx.Nonce())
-	splain.addNode(tx.GasPrice().Bytes())
-	splain.addNode(tx.Gas())
-	splain.addNode(tx.To().Bytes())
-	splain.addNode(tx.Value().Bytes())
-	splain.addNode(tx.Data())
+	splain.addNode(tx.Nonce(), NONCE)
+	splain.addNode(tx.GasPrice().Bytes(), GAS_PRICE)
+	splain.addNode(tx.Gas(), GAS_LIMIT)
+	splain.addNode(tx.To().Bytes(), RECIPIENT)
+	splain.addNode(tx.Value().Bytes(), VALUE)
+	splain.addNode(tx.Data(), DATA)
 	sigV, sigR, sigS := tx.RawSignatureValues()
-	splain.addNode(sigV.Bytes())
-	splain.addNode(sigR.Bytes())
-	splain.addNode(sigS.Bytes())
+	splain.addNode(sigV.Bytes(), SIG_V)
+	splain.addNode(sigR.Bytes(), SIG_R)
+	splain.addNode(sigS.Bytes(), SIG_S)
 	out, _ := json.MarshalIndent(splain, "", "	")
 	fmt.Println(string(out))
 
@@ -105,7 +119,7 @@ func parse() []byte {
 
 }
 
-func (s *Splain) addNode(val interface{}) {
+func (s *Splain) addNode(val interface{}, f field) {
 
 	enc, err := rlp.EncodeToBytes(val)
 	if err != nil {
@@ -116,8 +130,19 @@ func (s *Splain) addNode(val interface{}) {
 	// add the value node skipping however long the prefix was
 	var tok Token
 	tok.Hex = Hex(enc[i:])
-	tok.Text = "I need to inject this somehow"
-	tok.More = "I also need to inject this"
+
+	// construct the explanatory text
+	var txt, more string
+	switch f {
+	case NONCE:
+		txt, more = nonceInfo(val)
+	default:
+		txt = "NOT IMPLEMENTED"
+		more = "Not IMPLEMENTED"
+
+	}
+	tok.Text = txt
+	tok.More = more
 
 	// Edgcase for when the prefix tells us the data length of the next argument is zero
 	// we don't want to add a node for no data
@@ -125,6 +150,15 @@ func (s *Splain) addNode(val interface{}) {
 		s.Tokens = append(s.Tokens, tok)
 	}
 
+}
+
+func nonceInfo(val interface{}) (string, string) {
+
+	i, _ := val.(uint64)
+	txt := fmt.Sprintf("Nonce: %d", i)
+	more := "The nonce is a sequence number issued my the transaction creator used to prevent message replay. The nonce of each transaction of an account must be exactly 1 greater than the previous nonce used. The Ethereum yellow paper defines the nonce as 'A scalar value equal to the number of transactions sent from this address or, in the case of accounts with associated code, the number of contract-creations made by this account"
+
+	return txt, more
 }
 
 // if there is a rlp length prefix add a node for it, else do nothing.
