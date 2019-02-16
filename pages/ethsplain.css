@@ -7,6 +7,7 @@ body {
   background: -webkit-gradient(linear,left top,left bottom,from(#0d182d),to(#000));
   background: -webkit-linear-gradient(#0d182d,#000);
   background: linear-gradient(#0d182d,#000);
+  padding: 2em;
 }
 
 a {
@@ -40,7 +41,8 @@ a {
 #command {
 font-size: 18px;
   word-spacing: 10px;
-text-align: center;
+word-break: break-all;
+line-height: 32px;
 }
 
 #command-wrapper {

@@ -1078,17 +1078,17 @@ function adjustcommandfontsize () {
       .text()
   ).length
 
-  var commandfontsize
+  var commandfontsize = '16px'
 
-  if (commandlength > 105) {
-    commandfontsize = '10px'
-  } else if (commandlength > 95) {
-    commandfontsize = '12px'
-  } else if (commandlength > 70) {
-    commandfontsize = '14px'
-  } else if (commandlength > 60) {
-    commandfontsize = '16px'
-  }
+  // if (commandlength > 105) {
+  //   commandfontsize = '10px'
+  // } else if (commandlength > 95) {
+  //   commandfontsize = '12px'
+  // } else if (commandlength > 70) {
+  //   commandfontsize = '14px'
+  // } else if (commandlength > 60) {
+  //   commandfontsize = '16px'
+  // }
 
   if (commandfontsize) {
     console.log(
