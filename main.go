@@ -25,6 +25,10 @@ type Token struct {
 }
 
 func main() {
+	parse()
+}
+
+func parse() []byte {
 	//http.HandleFunc("/", tokenize)
 	//log.Fatal(httpListenAndServe(":8080", nil))
 
@@ -56,15 +60,28 @@ func main() {
 
 	tx.Nonce()
 	//tmp := make([]byte, 10)
-	tmp, err := rlp.EncodeToBytes(tx.Nonce())
+	encNonce, err := rlp.EncodeToBytes(tx.Nonce())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("HEX; ", hex.EncodeToString(tmp))
+	fmt.Println("HEX; ", hex.EncodeToString(encNonce))
+
+	// We find the overall rlp prefix by reading until we find the nonce
+	//prefix := buf[:bytes.Index(buf, encNonce)]
+	//fmt.Println("PREFIX:", hex.EncodeToString(prefix))
+	//splain.addNode(prefix)
+	//addRLPNode(&splain, prefix)
 
 	splain.addNode(tx.Nonce())
 	splain.addNode(tx.GasPrice().Bytes())
 	splain.addNode(tx.Gas())
+	splain.addNode(tx.To().Bytes())
+	splain.addNode(tx.Value().Bytes())
+	splain.addNode(tx.Data())
+	sigV, sigR, sigS := tx.RawSignatureValues()
+	splain.addNode(sigV.Bytes())
+	splain.addNode(sigR.Bytes())
+	splain.addNode(sigS.Bytes())
 	out, _ := json.MarshalIndent(splain, "", "	")
 	fmt.Println(string(out))
 
@@ -74,13 +91,11 @@ func main() {
 	}
 	fmt.Println("concat", concat)
 
+	return out
+
 	// convert value to bytes
 	// rlp encode it
 	// if it is larger than originally, pass the prefix to rlpExplain
-
-	//rlp.Enco.Nonce()
-	//bytes.Index
-	//append(splain, tok.
 
 	// start at beginning of raw
 	// 2 walking pointers
@@ -103,7 +118,12 @@ func (s *Splain) addNode(val interface{}) {
 	tok.Hex = Hex(enc[i:])
 	tok.Text = "I need to inject this somehow"
 	tok.More = "I also need to inject this"
-	s.Tokens = append(s.Tokens, tok)
+
+	// Edgcase for when the prefix tells us the data length of the next argument is zero
+	// we don't want to add a node for no data
+	if len(tok.Hex) > 0 {
+		s.Tokens = append(s.Tokens, tok)
+	}
 
 }
 
