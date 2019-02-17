@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -41,7 +42,11 @@ var (
 )
 
 func main() {
-	parse()
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, string(parse()))
+	})
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func parse() []byte {

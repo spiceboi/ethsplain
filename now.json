@@ -1,8 +1,5 @@
 {
-  "version": 2,
-  "name": "nextjs",
-  "builds": [
-      { "src": "next.config.js", "use": "@now/next" },
-      { "src": "*.go", "use": "@now/go" }
-  ]
+  "version": 1,
+  "name": "ethsplain-server"
 }
+  

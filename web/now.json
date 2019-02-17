@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "ethsplain",
+  "alias": ["ethsplain.now.sh"],
+  "builds": [
+      { "src": "next.config.js", "use": "@now/next" },
+      { "src": "*.go", "use": "@now/go" }
+  ],
+  "routes": [
+    { "src": "/api", "dest": "/index.go" }
+  ]
+}
