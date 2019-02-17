@@ -151,6 +151,8 @@ func (s *Splain) addNode(val interface{}, f field) {
 		txt, more = sigVInfo(val)
 	case SIG_R:
 		txt, more = sigRInfo(val)
+	case SIG_S:
+		txt, more = sigSInfo(val)
 
 	default:
 		txt = "NOT IMPLEMENTED"
@@ -235,10 +237,18 @@ func sigVInfo(val interface{}) (string, string) {
 }
 
 func sigRInfo(val interface{}) (string, string) {
-	buf, _ := val([]byte)
+	buf, _ := val.([]byte)
 
 	txt := fmt.Sprintf("Signature (r) value: %s", hex.EncodeToString(buf))
 	more := "Part of the signature pair (r,s). Represents the X-coordinate of an ephemeral public key created during the ECDSA signing process"
+	return txt, more
+}
+
+func sigSInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Signature (s) value: %s", hex.EncodeToString(buf))
+	more := "Part of the signature pair (r,s). Generated using the ECDSA signing algorithm"
 	return txt, more
 }
 
