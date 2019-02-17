@@ -141,6 +141,17 @@ func (s *Splain) addNode(val interface{}, f field) {
 		txt, more = gasPriceInfo(val)
 	case GAS_LIMIT:
 		txt, more = gasLimitInfo(val)
+	case RECIPIENT:
+		txt, more = recipientInfo(val)
+	case VALUE:
+		txt, more = valueInfo(val)
+	case DATA:
+		txt, more = dataInfo(val)
+	case SIG_V:
+		txt, more = sigVInfo(val)
+	case SIG_R:
+		txt, more = sigRInfo(val)
+
 	default:
 		txt = "NOT IMPLEMENTED"
 		more = "Not IMPLEMENTED"
@@ -151,9 +162,9 @@ func (s *Splain) addNode(val interface{}, f field) {
 
 	// Edgcase for when the prefix tells us the data length of the next argument is zero
 	// we don't want to add a node for no data
-	if len(tok.Hex) > 0 {
-		s.Tokens = append(s.Tokens, tok)
-	}
+	//if len(tok.Hex) > 0 {
+	s.Tokens = append(s.Tokens, tok)
+	//}
 
 }
 
@@ -179,6 +190,55 @@ func gasLimitInfo(val interface{}) (string, string) {
 	i := val.(uint64)
 	txt := fmt.Sprintf("Gas Limit: %d", i)
 	more := "The maximum amount of gas the originator is willing to pay for this transaction. The amount of gas consumed depends on how much computation your transaction requires."
+	return txt, more
+}
+
+func recipientInfo(val interface{}) (string, string) {
+	addrBytes := val.([]byte)
+	if len(addrBytes) == 0 || (len(addrBytes) == 1 && addrBytes[0] == 0x0) {
+		txt := fmt.Sprintf("Recipient Address: 0x0")
+		more := "This transaction is a special type of transaction for Contract Creation. Notice how the address is the Zero Address 0x0. This signals contract creation."
+		return txt, more
+	}
+	txt := fmt.Sprintf("Recipient Address: 0x%s", hex.EncodeToString(addrBytes))
+	more := `An ethereum address is generated with the following steps
+1. Generate a public key by multiplying the private key 'k' by the Ethereum generator point G. The public key is the concatenated x + y coordinate of the result of this multiplication
+2. Take the Keccak-256 hash of that public key 
+3. Take the last 20 bytes of that hash and encode to hexidecimal.`
+
+	return txt, more
+}
+
+func valueInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+	i := big.NewInt(0).SetBytes(buf)
+
+	txt := fmt.Sprintf("Value: %s", i.String())
+	more := "The amount of ether (in wei) to send to the recipient address."
+	return txt, more
+}
+
+func dataInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Data: %s", hex.EncodeToString(buf))
+	more := "Data being sent to a contract function. The first 4 bytes are known as the 'function selector'. The remaining data represents arguments to the chosen function"
+	return txt, more
+}
+
+func sigVInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Signature Prefix Value (v): %s", hex.EncodeToString(buf))
+	more := "Indicates both the chainID of the transaction as well as the parity (odd or even) of the y component of the public key"
+	return txt, more
+}
+
+func sigRInfo(val interface{}) (string, string) {
+	buf, _ := val([]byte)
+
+	txt := fmt.Sprintf("Signature (r) value: %s", hex.EncodeToString(buf))
+	more := "Part of the signature pair (r,s). Represents the X-coordinate of an ephemeral public key created during the ECDSA signing process"
 	return txt, more
 }
 
