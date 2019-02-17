@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	//"github.com/ethereum/go-ethereum/rlp"
 )
 
 // Splain sthoeuhstohu
@@ -23,6 +25,20 @@ type Token struct {
 	Text string
 	More string
 }
+
+type field int
+
+var (
+	NONCE     field = 0
+	GAS_PRICE field = 1
+	GAS_LIMIT field = 2
+	RECIPIENT field = 3
+	VALUE     field = 4
+	DATA      field = 5
+	SIG_V     field = 6
+	SIG_R     field = 7
+	SIG_S     field = 8
+)
 
 func main() {
 	parse()
@@ -72,16 +88,16 @@ func parse() []byte {
 	//splain.addNode(prefix)
 	//addRLPNode(&splain, prefix)
 
-	splain.addNode(tx.Nonce())
-	splain.addNode(tx.GasPrice().Bytes())
-	splain.addNode(tx.Gas())
-	splain.addNode(tx.To().Bytes())
-	splain.addNode(tx.Value().Bytes())
-	splain.addNode(tx.Data())
+	splain.addNode(tx.Nonce(), NONCE)
+	splain.addNode(tx.GasPrice().Bytes(), GAS_PRICE)
+	splain.addNode(tx.Gas(), GAS_LIMIT)
+	splain.addNode(tx.To().Bytes(), RECIPIENT)
+	splain.addNode(tx.Value().Bytes(), VALUE)
+	splain.addNode(tx.Data(), DATA)
 	sigV, sigR, sigS := tx.RawSignatureValues()
-	splain.addNode(sigV.Bytes())
-	splain.addNode(sigR.Bytes())
-	splain.addNode(sigS.Bytes())
+	splain.addNode(sigV.Bytes(), SIG_V)
+	splain.addNode(sigR.Bytes(), SIG_R)
+	splain.addNode(sigS.Bytes(), SIG_S)
 	out, _ := json.MarshalIndent(splain, "", "	")
 	fmt.Println(string(out))
 
@@ -105,7 +121,7 @@ func parse() []byte {
 
 }
 
-func (s *Splain) addNode(val interface{}) {
+func (s *Splain) addNode(val interface{}, f field) {
 
 	enc, err := rlp.EncodeToBytes(val)
 	if err != nil {
@@ -116,15 +132,125 @@ func (s *Splain) addNode(val interface{}) {
 	// add the value node skipping however long the prefix was
 	var tok Token
 	tok.Hex = Hex(enc[i:])
-	tok.Text = "I need to inject this somehow"
-	tok.More = "I also need to inject this"
+
+	// construct the explanatory text
+	var txt, more string
+	switch f {
+	case NONCE:
+		txt, more = nonceInfo(val)
+	case GAS_PRICE:
+		txt, more = gasPriceInfo(val)
+	case GAS_LIMIT:
+		txt, more = gasLimitInfo(val)
+	case RECIPIENT:
+		txt, more = recipientInfo(val)
+	case VALUE:
+		txt, more = valueInfo(val)
+	case DATA:
+		txt, more = dataInfo(val)
+	case SIG_V:
+		txt, more = sigVInfo(val)
+	case SIG_R:
+		txt, more = sigRInfo(val)
+	case SIG_S:
+		txt, more = sigSInfo(val)
+
+	default:
+		txt = "NOT IMPLEMENTED"
+		more = "Not IMPLEMENTED"
+
+	}
+	tok.Text = txt
+	tok.More = more
 
 	// Edgcase for when the prefix tells us the data length of the next argument is zero
 	// we don't want to add a node for no data
-	if len(tok.Hex) > 0 {
-		s.Tokens = append(s.Tokens, tok)
-	}
+	//if len(tok.Hex) > 0 {
+	s.Tokens = append(s.Tokens, tok)
+	//}
 
+}
+
+func nonceInfo(val interface{}) (string, string) {
+
+	i, _ := val.(uint64)
+	txt := fmt.Sprintf("Nonce: %d", i)
+	more := "The nonce is a sequence number issued my the transaction creator used to prevent message replay. The nonce of each transaction of an account must be exactly 1 greater than the previous nonce used. The Ethereum yellow paper defines the nonce as 'A scalar value equal to the number of transactions sent from this address or, in the case of accounts with associated code, the number of contract-creations made by this account"
+
+	return txt, more
+}
+
+func gasPriceInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+	i := big.NewInt(0).SetBytes(buf)
+
+	txt := fmt.Sprintf("Gas Price: %s", i.String())
+	more := "The price of gas (in wei) that the sender is willing to pay. Gas is purchased with ether and serves to protect the limited resources of the network (computation, memory, and storage). The amount of ether spent for gas can be calculated by multiplying the Gas Price by the amount of gas consumed in the transaction (21000 gas for a standard transaction)"
+	return txt, more
+}
+
+func gasLimitInfo(val interface{}) (string, string) {
+	i := val.(uint64)
+	txt := fmt.Sprintf("Gas Limit: %d", i)
+	more := "The maximum amount of gas the originator is willing to pay for this transaction. The amount of gas consumed depends on how much computation your transaction requires."
+	return txt, more
+}
+
+func recipientInfo(val interface{}) (string, string) {
+	addrBytes := val.([]byte)
+	if len(addrBytes) == 0 || (len(addrBytes) == 1 && addrBytes[0] == 0x0) {
+		txt := fmt.Sprintf("Recipient Address: 0x0")
+		more := "This transaction is a special type of transaction for Contract Creation. Notice how the address is the Zero Address 0x0. This signals contract creation."
+		return txt, more
+	}
+	txt := fmt.Sprintf("Recipient Address: 0x%s", hex.EncodeToString(addrBytes))
+	more := `An ethereum address is generated with the following steps
+1. Generate a public key by multiplying the private key 'k' by the Ethereum generator point G. The public key is the concatenated x + y coordinate of the result of this multiplication
+2. Take the Keccak-256 hash of that public key 
+3. Take the last 20 bytes of that hash and encode to hexidecimal.`
+
+	return txt, more
+}
+
+func valueInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+	i := big.NewInt(0).SetBytes(buf)
+
+	txt := fmt.Sprintf("Value: %s", i.String())
+	more := "The amount of ether (in wei) to send to the recipient address."
+	return txt, more
+}
+
+func dataInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Data: %s", hex.EncodeToString(buf))
+	more := "Data being sent to a contract function. The first 4 bytes are known as the 'function selector'. The remaining data represents arguments to the chosen function"
+	return txt, more
+}
+
+func sigVInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Signature Prefix Value (v): %s", hex.EncodeToString(buf))
+	more := "Indicates both the chainID of the transaction as well as the parity (odd or even) of the y component of the public key"
+	return txt, more
+}
+
+func sigRInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Signature (r) value: %s", hex.EncodeToString(buf))
+	more := "Part of the signature pair (r,s). Represents the X-coordinate of an ephemeral public key created during the ECDSA signing process"
+	return txt, more
+}
+
+func sigSInfo(val interface{}) (string, string) {
+	buf, _ := val.([]byte)
+
+	txt := fmt.Sprintf("Signature (s) value: %s", hex.EncodeToString(buf))
+	more := "Part of the signature pair (r,s). Generated using the ECDSA signing algorithm"
+	return txt, more
 }
 
 // if there is a rlp length prefix add a node for it, else do nothing.
